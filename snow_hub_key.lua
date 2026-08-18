@@ -23,15 +23,15 @@ KeyGui.Parent = LP:WaitForChild("PlayerGui")
 local KeyFrame = Instance.new("Frame")
 KeyFrame.Size = UDim2.new(0, 300, 0, 190)
 KeyFrame.Position = UDim2.new(0.5, -150, 0.5, -95)
-KeyFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+KeyFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
 KeyFrame.BorderSizePixel = 0
 KeyFrame.Parent = KeyGui
 Instance.new("UICorner", KeyFrame).CornerRadius = UDim.new(0, 8)
-Instance.new("UIStroke", KeyFrame).Color = Color3.fromRGB(50, 50, 60)
+Instance.new("UIStroke", KeyFrame).Color = Color3.fromRGB(40, 40, 50)
 
 local KeyTitle = Instance.new("TextLabel")
 KeyTitle.Size = UDim2.new(1, 0, 0, 32)
-KeyTitle.BackgroundColor3 = Color3.fromRGB(28, 28, 35)
+KeyTitle.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
 KeyTitle.BorderSizePixel = 0
 KeyTitle.Text = "SNOW HUB"
 KeyTitle.TextColor3 = Color3.new(1, 1, 1)
@@ -54,10 +54,10 @@ KeyLabel.Parent = KeyFrame
 local KeyBox = Instance.new("TextBox")
 KeyBox.Size = UDim2.new(1, -20, 0, 28)
 KeyBox.Position = UDim2.new(0, 10, 0, 60)
-KeyBox.BackgroundColor3 = Color3.fromRGB(32, 32, 40)
+KeyBox.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
 KeyBox.BorderSizePixel = 0
 KeyBox.PlaceholderText = "Paste key here..."
-KeyBox.PlaceholderColor3 = Color3.fromRGB(80, 80, 90)
+KeyBox.PlaceholderColor3 = Color3.fromRGB(60, 60, 70)
 KeyBox.TextColor3 = Color3.new(1, 1, 1)
 KeyBox.Font = Enum.Font.Gotham
 KeyBox.TextSize = 12
@@ -125,6 +125,10 @@ local function StartHub()
     local Character = LP.Character or LP.CharacterAdded:Wait()
     local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
     local ToggleBtns = {}
+    local ScreenGui, MenuFrame, Title, Container, KBFrame, KBTitle, KBStroke, KBContainer
+    local KBRows, KBLabels = {}, {}
+    local SectionLabels = {}
+    local AllElements = {}
 
     local function RemoveESPByType(t)
         for p, esp in pairs(ESPObjects) do
@@ -140,52 +144,67 @@ local function StartHub()
     LP.CharacterAdded:Connect(function(c)
         Character = c
         Humanoid = c:WaitForChild("Humanoid")
+        if Config.Noclip then
+            task.spawn(function()
+                while Config.Noclip and Character and Character.Parent do
+                    for _, part in pairs(Character:GetDescendants()) do
+                        if part:IsA("BasePart") then part.CanCollide = false end
+                    end
+                    task.wait(0.1)
+                end
+            end)
+        end
     end)
 
-    local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "SnowHub"
-    ScreenGui.ResetOnSpawn = false
-    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    pcall(function()
-        local old = LP:WaitForChild("PlayerGui"):FindFirstChild("SnowHub")
-        if old then old:Destroy() end
-    end)
-    ScreenGui.Parent = LP:WaitForChild("PlayerGui")
+    local function BuildUI()
+        ScreenGui = Instance.new("ScreenGui")
+        ScreenGui.Name = "SnowHub"
+        ScreenGui.ResetOnSpawn = false
+        ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        pcall(function()
+            local old = LP:WaitForChild("PlayerGui"):FindFirstChild("SnowHub")
+            if old then old:Destroy() end
+        end)
+        ScreenGui.Parent = LP:WaitForChild("PlayerGui")
 
-    local MenuFrame = Instance.new("Frame")
-    MenuFrame.Size = UDim2.new(0, 340, 0, 420)
-    MenuFrame.Position = UDim2.new(0.5, -170, 0.5, -210)
-    MenuFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
-    MenuFrame.BorderSizePixel = 0
-    MenuFrame.Visible = false
-    MenuFrame.Parent = ScreenGui
-    Instance.new("UICorner", MenuFrame).CornerRadius = UDim.new(0, 8)
-    local MenuStroke = Instance.new("UIStroke", MenuFrame)
-    MenuStroke.Color = Config.MenuColor
-    MenuStroke.Thickness = 1
+        MenuFrame = Instance.new("Frame")
+        MenuFrame.Size = UDim2.new(0, 340, 0, 420)
+        MenuFrame.Position = UDim2.new(0.5, -170, 0.5, -210)
+        MenuFrame.BackgroundColor3 = Color3.fromRGB(8, 8, 10)
+        MenuFrame.BorderSizePixel = 0
+        MenuFrame.Visible = Config.MenuOpen
+        MenuFrame.Parent = ScreenGui
+        Instance.new("UICorner", MenuFrame).CornerRadius = UDim.new(0, 8)
+        local MenuStrokeInst = Instance.new("UIStroke", MenuFrame)
+        MenuStrokeInst.Color = Config.MenuColor
+        MenuStrokeInst.Thickness = 1
+        AllElements.menuStroke = MenuStrokeInst
 
-    local Title = Instance.new("TextLabel")
-    Title.Size = UDim2.new(1, 0, 0, 34)
-    Title.BackgroundColor3 = Color3.new(Config.MenuColor.R * 0.35, Config.MenuColor.G * 0.35, Config.MenuColor.B * 0.35)
-    Title.BorderSizePixel = 0
-    Title.Text = "SNOW HUB"
-    Title.TextColor3 = Color3.new(1, 1, 1)
-    Title.Font = Enum.Font.GothamBold
-    Title.TextSize = 14
-    Title.Parent = MenuFrame
-    Instance.new("UICorner", Title).CornerRadius = UDim.new(0, 8)
+        Title = Instance.new("TextLabel")
+        Title.Size = UDim2.new(1, 0, 0, 34)
+        Title.BackgroundColor3 = Color3.new(Config.MenuColor.R * 0.3, Config.MenuColor.G * 0.3, Config.MenuColor.B * 0.3)
+        Title.BorderSizePixel = 0
+        Title.Text = "SNOW HUB"
+        Title.TextColor3 = Color3.new(1, 1, 1)
+        Title.Font = Enum.Font.GothamBold
+        Title.TextSize = 14
+        Title.Parent = MenuFrame
+        Instance.new("UICorner", Title).CornerRadius = UDim.new(0, 8)
+        AllElements.title = Title
 
-    local Container = Instance.new("ScrollingFrame")
-    Container.Size = UDim2.new(1, -12, 1, -40)
-    Container.Position = UDim2.new(0, 6, 0, 38)
-    Container.BackgroundTransparency = 1
-    Container.ScrollBarThickness = 3
-    Container.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 100)
-    Container.CanvasSize = UDim2.new(0, 0, 0, 0)
-    Container.Parent = MenuFrame
+        Container = Instance.new("ScrollingFrame")
+        Container.Size = UDim2.new(1, -12, 1, -40)
+        Container.Position = UDim2.new(0, 6, 0, 38)
+        Container.BackgroundTransparency = 1
+        Container.ScrollBarThickness = 3
+        Container.ScrollBarImageColor3 = Config.MenuColor
+        Container.CanvasSize = UDim2.new(0, 0, 0, 0)
+        Container.Parent = MenuFrame
+        AllElements.container = Container
 
-    Instance.new("UIListLayout", Container).Padding = UDim.new(0, 4)
-    Container:FindFirstChildOfClass("UIListLayout").SortOrder = Enum.SortOrder.LayoutOrder
+        Instance.new("UIListLayout", Container).Padding = UDim.new(0, 4)
+        Container:FindFirstChildOfClass("UIListLayout").SortOrder = Enum.SortOrder.LayoutOrder
+    end
 
     local function AutoScroll()
         local total = 0
@@ -198,7 +217,7 @@ local function StartHub()
     local function CreateSection(name, order)
         local f = Instance.new("Frame")
         f.Size = UDim2.new(1, 0, 0, 24)
-        f.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+        f.BackgroundColor3 = Color3.fromRGB(12, 12, 15)
         f.BorderSizePixel = 0
         f.LayoutOrder = order
         f.Parent = Container
@@ -208,18 +227,19 @@ local function StartHub()
         t.Position = UDim2.new(0, 10, 0, 0)
         t.BackgroundTransparency = 1
         t.Text = name
-        t.TextColor3 = Color3.fromRGB(160, 160, 180)
+        t.TextColor3 = Config.MenuColor
         t.Font = Enum.Font.GothamBold
         t.TextSize = 11
         t.TextXAlignment = Enum.TextXAlignment.Left
         t.Parent = f
+        SectionLabels[name] = t
         AutoScroll()
     end
 
     local function CreateToggle(name, default, order, callback)
         local f = Instance.new("Frame")
         f.Size = UDim2.new(1, 0, 0, 26)
-        f.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+        f.BackgroundColor3 = Color3.fromRGB(12, 12, 15)
         f.BorderSizePixel = 0
         f.LayoutOrder = order
         f.Parent = Container
@@ -239,7 +259,7 @@ local function StartHub()
         local btn = Instance.new("TextButton")
         btn.Size = UDim2.new(0, 44, 0, 18)
         btn.Position = UDim2.new(1, -54, 0.5, -9)
-        btn.BackgroundColor3 = default and Color3.fromRGB(45, 150, 70) or Color3.fromRGB(50, 50, 58)
+        btn.BackgroundColor3 = default and Color3.fromRGB(45, 150, 70) or Color3.fromRGB(28, 28, 32)
         btn.BorderSizePixel = 0
         btn.Text = default and "ON" or "OFF"
         btn.TextColor3 = Color3.new(1, 1, 1)
@@ -252,13 +272,13 @@ local function StartHub()
         ToggleBtns[name] = {btn = btn, getState = function() return state end, setState = function(s)
             state = s
             btn.Text = state and "ON" or "OFF"
-            btn.BackgroundColor3 = state and Color3.fromRGB(45, 150, 70) or Color3.fromRGB(50, 50, 58)
+            btn.BackgroundColor3 = state and Color3.fromRGB(45, 150, 70) or Color3.fromRGB(28, 28, 32)
         end}
 
         btn.MouseButton1Click:Connect(function()
             state = not state
             btn.Text = state and "ON" or "OFF"
-            btn.BackgroundColor3 = state and Color3.fromRGB(45, 150, 70) or Color3.fromRGB(50, 50, 58)
+            btn.BackgroundColor3 = state and Color3.fromRGB(45, 150, 70) or Color3.fromRGB(28, 28, 32)
             callback(state)
         end)
         AutoScroll()
@@ -267,7 +287,7 @@ local function StartHub()
     local function CreateKeybind(name, default, order, callback)
         local f = Instance.new("Frame")
         f.Size = UDim2.new(1, 0, 0, 26)
-        f.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+        f.BackgroundColor3 = Color3.fromRGB(12, 12, 15)
         f.BorderSizePixel = 0
         f.LayoutOrder = order
         f.Parent = Container
@@ -287,7 +307,7 @@ local function StartHub()
         local btn = Instance.new("TextButton")
         btn.Size = UDim2.new(0, 80, 0, 18)
         btn.Position = UDim2.new(1, -90, 0.5, -9)
-        btn.BackgroundColor3 = Color3.fromRGB(38, 38, 48)
+        btn.BackgroundColor3 = Color3.fromRGB(22, 22, 26)
         btn.BorderSizePixel = 0
         btn.Text = default == Enum.KeyCode.None and "[ NONE ]" or "[ "..default.Name.." ]"
         btn.TextColor3 = Color3.fromRGB(180, 180, 200)
@@ -313,7 +333,7 @@ local function StartHub()
                     currentKey = input.KeyCode
                     btn.Text = "[ "..input.KeyCode.Name.." ]"
                 end
-                btn.BackgroundColor3 = Color3.fromRGB(38, 38, 48)
+                btn.BackgroundColor3 = Color3.fromRGB(22, 22, 26)
                 listening = false
                 conn:Disconnect()
                 callback(currentKey)
@@ -325,7 +345,7 @@ local function StartHub()
     local function CreateSubToggle(name, default, order, parentOrder, callback)
         local f = Instance.new("Frame")
         f.Size = UDim2.new(1, 0, 0, 22)
-        f.BackgroundColor3 = Color3.fromRGB(22, 22, 28)
+        f.BackgroundColor3 = Color3.fromRGB(10, 10, 13)
         f.BorderSizePixel = 0
         f.LayoutOrder = order
         f.Parent = Container
@@ -345,7 +365,7 @@ local function StartHub()
         local btn = Instance.new("TextButton")
         btn.Size = UDim2.new(0, 38, 0, 16)
         btn.Position = UDim2.new(1, -48, 0.5, -8)
-        btn.BackgroundColor3 = default and Color3.fromRGB(45, 150, 70) or Color3.fromRGB(42, 42, 50)
+        btn.BackgroundColor3 = default and Color3.fromRGB(45, 150, 70) or Color3.fromRGB(24, 24, 28)
         btn.BorderSizePixel = 0
         btn.Text = default and "ON" or "OFF"
         btn.TextColor3 = Color3.new(1, 1, 1)
@@ -358,13 +378,13 @@ local function StartHub()
         ToggleBtns[name] = {btn = btn, getState = function() return state end, setState = function(s)
             state = s
             btn.Text = state and "ON" or "OFF"
-            btn.BackgroundColor3 = state and Color3.fromRGB(45, 150, 70) or Color3.fromRGB(42, 42, 50)
+            btn.BackgroundColor3 = state and Color3.fromRGB(45, 150, 70) or Color3.fromRGB(24, 24, 28)
         end}
 
         btn.MouseButton1Click:Connect(function()
             state = not state
             btn.Text = state and "ON" or "OFF"
-            btn.BackgroundColor3 = state and Color3.fromRGB(45, 150, 70) or Color3.fromRGB(42, 42, 50)
+            btn.BackgroundColor3 = state and Color3.fromRGB(45, 150, 70) or Color3.fromRGB(24, 24, 28)
             callback(state)
         end)
         AutoScroll()
@@ -373,7 +393,7 @@ local function StartHub()
     local function CreateSlider(name, min, max, default, order, callback)
         local f = Instance.new("Frame")
         f.Size = UDim2.new(1, 0, 0, 30)
-        f.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+        f.BackgroundColor3 = Color3.fromRGB(12, 12, 15)
         f.BorderSizePixel = 0
         f.LayoutOrder = order
         f.Parent = Container
@@ -403,14 +423,14 @@ local function StartHub()
         local bar = Instance.new("Frame")
         bar.Size = UDim2.new(1, -20, 0, 6)
         bar.Position = UDim2.new(0, 10, 0, 20)
-        bar.BackgroundColor3 = Color3.fromRGB(38, 38, 48)
+        bar.BackgroundColor3 = Color3.fromRGB(22, 22, 26)
         bar.BorderSizePixel = 0
         bar.Parent = f
         Instance.new("UICorner", bar).CornerRadius = UDim.new(0, 3)
 
         local fill = Instance.new("Frame")
         fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
-        fill.BackgroundColor3 = Color3.fromRGB(80, 140, 240)
+        fill.BackgroundColor3 = Config.MenuColor
         fill.BorderSizePixel = 0
         fill.Parent = bar
         Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 3)
@@ -438,7 +458,7 @@ local function StartHub()
     local function CreateColorPicker(name, default, order, callback)
         local f = Instance.new("Frame")
         f.Size = UDim2.new(1, 0, 0, 26)
-        f.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+        f.BackgroundColor3 = Color3.fromRGB(12, 12, 15)
         f.BorderSizePixel = 0
         f.LayoutOrder = order
         f.Parent = Container
@@ -601,13 +621,13 @@ local function StartHub()
         for _, obj in pairs(Workspace:GetDescendants()) do
             if obj:IsA("Model") then
                 local n = obj.Name:lower()
-                if n:find("pallet") then
+                if n:find("pallet") or n:find("plank") or n:find("wood") then
                     local primary = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
                     if primary then table.insert(pals, primary) end
                 end
             elseif obj:IsA("BasePart") then
                 local n = obj.Name:lower()
-                if n:find("pallet") then
+                if n:find("pallet") or n:find("plank") then
                     table.insert(pals, obj)
                 end
             end
@@ -620,7 +640,7 @@ local function StartHub()
         for _, obj in pairs(Workspace:GetDescendants()) do
             if obj:IsA("Model") then
                 local n = obj.Name:lower()
-                if n:find("generator") or n:find("gen") then
+                if n:find("generator") or n:find("gen") or n:find("gens") then
                     local primary = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
                     if primary then table.insert(gens, primary) end
                 end
@@ -639,13 +659,13 @@ local function StartHub()
         for _, obj in pairs(Workspace:GetDescendants()) do
             if obj:IsA("Model") then
                 local n = obj.Name:lower()
-                if n:find("window") or n:find("barricade") or n:find("windowbreak") or n:find("board") then
+                if n:find("window") or n:find("barricade") or n:find("board") or n:find("vault") or n:find("break") then
                     local primary = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
                     if primary then table.insert(wins, primary) end
                 end
             elseif obj:IsA("BasePart") then
                 local n = obj.Name:lower()
-                if n:find("window") or n:find("barricade") or n:find("windowbreak") or n:find("board") or n:find("glass") then
+                if n:find("window") or n:find("barricade") or n:find("board") or n:find("vault") or n:find("break") or n:find("glass") then
                     table.insert(wins, obj)
                 end
             end
@@ -760,6 +780,21 @@ local function StartHub()
         if t then t.setState(val) end
     end
 
+    local function ApplyMenuColor(c)
+        Config.MenuColor = c
+        if AllElements.menuStroke then AllElements.menuStroke.Color = c end
+        if AllElements.title then AllElements.title.BackgroundColor3 = Color3.new(c.R * 0.3, c.G * 0.3, c.B * 0.3) end
+        if AllElements.container then AllElements.container.ScrollBarImageColor3 = c end
+        for _, label in pairs(SectionLabels) do
+            label.TextColor3 = c
+        end
+        if KBStroke then KBStroke.Color = c end
+        if KBTitle then KBTitle.BackgroundColor3 = Color3.new(c.R * 0.3, c.G * 0.3, c.B * 0.3) end
+        if KBContainer then KBContainer.ScrollBarImageColor3 = c end
+    end
+
+    BuildUI()
+
     CreateSection("COMBAT", 1)
     CreateToggle("Auto-kinzhal", false, 2, function(v) Config.AutoDagger = v end)
     CreateKeybind("Bind:", Enum.KeyCode.None, 3, function(k) Config.AutoDaggerKey = k end)
@@ -832,14 +867,26 @@ local function StartHub()
         end
     end)
     CreateColorPicker("Menu Color:", Color3.fromRGB(80, 140, 240), 72, function(c)
-        Config.MenuColor = c
-        local ms = MenuFrame:FindFirstChildOfClass("UIStroke")
-        if ms then ms.Color = c end
-        Title.BackgroundColor3 = Color3.new(c.R * 0.35, c.G * 0.35, c.B * 0.35)
-        KBTitle.BackgroundColor3 = Color3.new(c.R * 0.35, c.G * 0.35, c.B * 0.35)
-        KBStroke.Color = c
-        Container.ScrollBarImageColor3 = c
-        KBContainer.ScrollBarImageColor3 = c
+        ApplyMenuColor(c)
+    end)
+
+    CreateSection("DEBUG", 90)
+    CreateToggle("Scan names", false, 91, function(v)
+        if not v then return end
+        print("[SNOW HUB] === WORKSPACE SCAN ===")
+        local found = {}
+        for _, obj in pairs(Workspace:GetDescendants()) do
+            local n = obj.Name:lower()
+            if n:find("pallet") or n:find("plank") or n:find("board") or n:find("window") or n:find("vault") or n:find("barricade") or n:find("generator") or n:find("gen") or n:find("break") then
+                local path = obj:GetFullName()
+                if not found[path] then
+                    found[path] = true
+                    print(string.format("  [%s] %s (%s) Parent: %s", obj.ClassName, obj.Name, path, obj.Parent and obj.Parent.Name or "?"))
+                end
+            end
+        end
+        print("[SNOW HUB] === SCAN DONE ===")
+        ToggleBtns["Scan names"].setState(false)
     end)
 
     local KeyMap = {
@@ -953,20 +1000,20 @@ local function StartHub()
         end)
     end)
 
-    local KBFrame = Instance.new("Frame")
+    KBFrame = Instance.new("Frame")
     KBFrame.Name = "KeybindsWindow"
     KBFrame.Size = UDim2.new(0, 200, 0, 0)
     KBFrame.Position = UDim2.new(0, 20, 0.5, -100)
-    KBFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+    KBFrame.BackgroundColor3 = Color3.fromRGB(8, 8, 10)
     KBFrame.BorderSizePixel = 0
     KBFrame.Parent = ScreenGui
     Instance.new("UICorner", KBFrame).CornerRadius = UDim.new(0, 8)
-    local KBStroke = Instance.new("UIStroke", KBFrame)
+    KBStroke = Instance.new("UIStroke", KBFrame)
     KBStroke.Color = Config.MenuColor
 
-    local KBTitle = Instance.new("TextLabel")
+    KBTitle = Instance.new("TextLabel")
     KBTitle.Size = UDim2.new(1, 0, 0, 26)
-    KBTitle.BackgroundColor3 = Color3.new(Config.MenuColor.R * 0.35, Config.MenuColor.G * 0.35, Config.MenuColor.B * 0.35)
+    KBTitle.BackgroundColor3 = Color3.new(Config.MenuColor.R * 0.3, Config.MenuColor.G * 0.3, Config.MenuColor.B * 0.3)
     KBTitle.BorderSizePixel = 0
     KBTitle.Text = "KEYBINDS"
     KBTitle.TextColor3 = Color3.new(1, 1, 1)
@@ -997,7 +1044,7 @@ local function StartHub()
         end
     end)
 
-    local KBContainer = Instance.new("ScrollingFrame")
+    KBContainer = Instance.new("ScrollingFrame")
     KBContainer.Size = UDim2.new(1, -10, 1, -30)
     KBContainer.Position = UDim2.new(0, 5, 0, 28)
     KBContainer.BackgroundTransparency = 1
@@ -1008,13 +1055,48 @@ local function StartHub()
     Instance.new("UIListLayout", KBContainer).Padding = UDim.new(0, 2)
     KBContainer:FindFirstChildOfClass("UIListLayout").SortOrder = Enum.SortOrder.LayoutOrder
 
-    local KBRows = {}
-    local KBLabels = {}
+    local KBEntryMap = {
+        {name = "Auto-kinzhal", configKey = "AutoDagger", keyField = "AutoDaggerKey"},
+        {name = "Speed",        configKey = "Speed",      keyField = "SpeedKey"},
+        {name = "Jump",         configKey = "Jump",       keyField = "JumpKey"},
+        {name = "Noclip",       configKey = "Noclip",     keyField = "NoclipKey"},
+        {name = "Maniac",       configKey = "ESPManiac",  keyField = "ESPManiacKey"},
+        {name = "Survivors",    configKey = "ESPSurvivors", keyField = "ESPSurvivorsKey"},
+        {name = "Generators",   configKey = "ESPGenerators", keyField = "ESPGeneratorsKey"},
+        {name = "Pallets",      configKey = "ESPPallets", keyField = "ESPPalletsKey"},
+        {name = "Windows",      configKey = "ESPWindows", keyField = "ESPWindowsKey"},
+    }
 
-    local function AddKBRow(name, configKey, order)
+    local function KN(k)
+        if k == Enum.KeyCode.None then return "[ NONE ]" end
+        return "[ " .. k.Name .. " ]"
+    end
+
+    local function RebuildKeybinds()
+        for _, child in pairs(KBContainer:GetChildren()) do
+            if child:IsA("Frame") then child:Destroy() end
+        end
+        KBRows = {}
+        KBLabels = {}
+
+        local order = 1
+        AddKBRowStatic("Menu", "[ RightShift ]", order)
+        order = order + 1
+
+        for _, entry in ipairs(KBEntryMap) do
+            if Config[entry.keyField] ~= Enum.KeyCode.None then
+                AddKBRowActive(entry.name, entry.configKey, entry.keyField, order)
+                order = order + 1
+            end
+        end
+
+        KBFrame.Size = UDim2.new(0, 200, 0, (order - 1) * 22 + 34)
+    end
+
+    function AddKBRowStatic(name, keyText, order)
         local f = Instance.new("Frame")
         f.Size = UDim2.new(1, 0, 0, 20)
-        f.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+        f.BackgroundColor3 = Color3.fromRGB(12, 12, 15)
         f.BorderSizePixel = 0
         f.LayoutOrder = order
         f.Parent = KBContainer
@@ -1035,76 +1117,68 @@ local function StartHub()
         v.Size = UDim2.new(0.4, -6, 1, 0)
         v.Position = UDim2.new(0.55, 0, 0, 0)
         v.BackgroundTransparency = 1
-        v.Text = "[ NONE ]"
+        v.Text = keyText
+        v.TextColor3 = Color3.fromRGB(255, 255, 255)
+        v.Font = Enum.Font.GothamBold
+        v.TextSize = 10
+        v.TextXAlignment = Enum.TextXAlignment.Right
+        v.Parent = f
+    end
+
+    function AddKBRowActive(name, configKey, keyField, order)
+        local f = Instance.new("Frame")
+        f.Size = UDim2.new(1, 0, 0, 20)
+        f.BackgroundColor3 = Color3.fromRGB(12, 12, 15)
+        f.BorderSizePixel = 0
+        f.LayoutOrder = order
+        f.Parent = KBContainer
+        Instance.new("UICorner", f).CornerRadius = UDim.new(0, 3)
+
+        local t = Instance.new("TextLabel")
+        t.Size = UDim2.new(0.55, 0, 1, 0)
+        t.Position = UDim2.new(0, 6, 0, 0)
+        t.BackgroundTransparency = 1
+        t.Text = name
+        t.TextColor3 = Color3.fromRGB(150, 150, 165)
+        t.Font = Enum.Font.Gotham
+        t.TextSize = 10
+        t.TextXAlignment = Enum.TextXAlignment.Left
+        t.Parent = f
+
+        local v = Instance.new("TextLabel")
+        v.Size = UDim2.new(0.4, -6, 1, 0)
+        v.Position = UDim2.new(0.55, 0, 0, 0)
+        v.BackgroundTransparency = 1
+        v.Text = KN(Config[keyField])
         v.TextColor3 = Color3.fromRGB(255, 255, 255)
         v.Font = Enum.Font.GothamBold
         v.TextSize = 10
         v.TextXAlignment = Enum.TextXAlignment.Right
         v.Parent = f
 
-        KBRows[name] = {frame = f, label = t, valueLabel = v, configKey = configKey}
-        KBLabels[name] = v
+        KBRows[name] = {frame = f, label = t, valueLabel = v, configKey = configKey, keyField = keyField}
     end
 
-    local function KN(k)
-        if k == Enum.KeyCode.None then return "[ NONE ]" end
-        return "[ " .. k.Name .. " ]"
-    end
-
-    AddKBRow("Menu", nil, 1)
-    KBLabels["Menu"].Text = "[ RightShift ]"
-    AddKBRow("Auto-kinzhal", "AutoDagger", 2)
-    AddKBRow("Speed", "Speed", 3)
-    AddKBRow("Jump", "Jump", 4)
-    AddKBRow("Noclip", "Noclip", 5)
-    AddKBRow("Maniac", "ESPManiac", 6)
-    AddKBRow("Survivors", "ESPSurvivors", 7)
-    AddKBRow("Generators", "ESPGenerators", 8)
-    AddKBRow("Pallets", "ESPPallets", 9)
-    AddKBRow("Windows", "ESPWindows", 10)
-
-    KBFrame.Size = UDim2.new(0, 200, 0, #KBContainer:GetChildren() * 22 + 30)
-
-    local function UpdateKBLabels()
-        local keyMap = {
-            Menu = nil,
-            ["Auto-kinzhal"] = "AutoDaggerKey",
-            Speed = "SpeedKey",
-            Jump = "JumpKey",
-            Noclip = "NoclipKey",
-            Maniac = "ESPManiacKey",
-            Survivors = "ESPSurvivorsKey",
-            Generators = "ESPGeneratorsKey",
-            Pallets = "ESPPalletsKey",
-            Windows = "ESPWindowsKey",
-        }
-        for name, row in pairs(KBRows) do
-            local keyField = keyMap[name]
-            if keyField then
-                row.valueLabel.Text = KN(Config[keyField])
-            end
-            if row.configKey then
-                local active = Config[row.configKey]
-                if active then
-                    row.frame.BackgroundColor3 = Color3.new(
-                        Config.MenuColor.R * 0.5,
-                        Config.MenuColor.G * 0.5,
-                        Config.MenuColor.B * 0.5
-                    )
-                    row.valueLabel.TextColor3 = Color3.new(1, 1, 1)
-                    row.label.TextColor3 = Color3.new(1, 1, 1)
-                else
-                    row.frame.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
-                    row.valueLabel.TextColor3 = Color3.fromRGB(120, 120, 130)
-                    row.label.TextColor3 = Color3.fromRGB(150, 150, 165)
-                end
-            end
-        end
-    end
+    RebuildKeybinds()
 
     task.spawn(function()
-        while ScreenGui.Parent do
-            UpdateKBLabels()
+        while ScreenGui and ScreenGui.Parent do
+            for name, row in pairs(KBRows) do
+                if row.configKey then
+                    local active = Config[row.configKey]
+                    local keyField = row.keyField
+                    if keyField then row.valueLabel.Text = KN(Config[keyField]) end
+                    if active then
+                        row.frame.BackgroundColor3 = Color3.new(Config.MenuColor.R * 0.4, Config.MenuColor.G * 0.4, Config.MenuColor.B * 0.4)
+                        row.valueLabel.TextColor3 = Color3.new(1, 1, 1)
+                        row.label.TextColor3 = Color3.new(1, 1, 1)
+                    else
+                        row.frame.BackgroundColor3 = Color3.fromRGB(12, 12, 15)
+                        row.valueLabel.TextColor3 = Color3.fromRGB(100, 100, 110)
+                        row.label.TextColor3 = Color3.fromRGB(150, 150, 165)
+                    end
+                end
+            end
             task.wait(0.15)
         end
     end)
