@@ -117,10 +117,22 @@ local function StartHub()
     }
 
     local ESPObjects = {}
+    local ESPType = {}
     local MapESPObjects = {}
     local Character = LP.Character or LP.CharacterAdded:Wait()
     local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
     local ToggleBtns = {}
+
+    local function RemoveESPByType(t)
+        for p, esp in pairs(ESPObjects) do
+            if ESPType[p] == t then
+                if esp.Billboard then esp.Billboard:Destroy() end
+                if esp.Highlight then esp.Highlight:Destroy() end
+                ESPObjects[p] = nil
+                ESPType[p] = nil
+            end
+        end
+    end
 
     LP.CharacterAdded:Connect(function(c)
         Character = c
@@ -479,7 +491,7 @@ local function StartHub()
         if ESPObjects[player] then return end
         local esp = {}
         local bb = Instance.new("BillboardGui")
-        bb.Size = UDim2.new(0, 180, 0, 40)
+        bb.Size = UDim2.new(0, 160, 0, 34)
         bb.StudsOffset = Vector3.new(0, 2.5, 0)
         bb.AlwaysOnTop = true
         bb.LightInfluence = 0
@@ -528,17 +540,19 @@ local function StartHub()
         end
     end
 
-    local function UpdateESP(player, color, label, showName, showDist)
+    local function UpdateESP(player, color, showName, showDist, espType)
         local esp = ESPObjects[player]
         if not esp then return end
         if not player.Character or not player.Character:FindFirstChild("Head") then
-            RemoveESP(player)
+            if esp.Billboard then esp.Billboard:Destroy() end
+            if esp.Highlight then esp.Highlight:Destroy() end
+            ESPObjects[player] = nil
+            ESPType[player] = nil
             return
         end
         esp.Billboard.Parent = player.Character:FindFirstChild("Head")
-        esp.NameLabel.Text = showName and (label.." ["..player.Name.."]") or label
+        esp.NameLabel.Text = showName and player.Name or ""
         esp.NameLabel.TextColor3 = color
-        esp.NameLabel.Visible = showName or true
         esp.Highlight.FillColor = color
         esp.Highlight.OutlineColor = color
         esp.Highlight.Parent = player.Character
@@ -550,6 +564,7 @@ local function StartHub()
         else
             esp.DistLabel.Visible = false
         end
+        ESPType[player] = espType
     end
 
     local function CreateMapESP(obj, name, color)
@@ -745,7 +760,7 @@ local function StartHub()
     CreateSection("ESP - PLAYERS", 10)
     CreateToggle("Maniac", false, 11, function(v)
         Config.ESPManiac = v
-        if not v then for p, _ in pairs(ESPObjects) do RemoveESP(p) end end
+        if not v then RemoveESPByType("maniac") end
     end)
     CreateKeybind("Bind:", Enum.KeyCode.None, 12, function(k) Config.ESPManiacKey = k end)
     CreateColorPicker("Color:", Color3.fromRGB(255, 50, 50), 13, function(c) Config.ESPManiacColor = c end)
@@ -754,7 +769,7 @@ local function StartHub()
 
     CreateToggle("Survivors", false, 20, function(v)
         Config.ESPSurvivors = v
-        if not v then for p, _ in pairs(ESPObjects) do RemoveESP(p) end end
+        if not v then RemoveESPByType("survivor") end
     end)
     CreateKeybind("Bind:", Enum.KeyCode.None, 21, function(k) Config.ESPSurvivorsKey = k end)
     CreateColorPicker("Color:", Color3.fromRGB(50, 200, 255), 22, function(c) Config.ESPSurvivorsColor = c end)
@@ -798,65 +813,6 @@ local function StartHub()
     CreateKeybind("Bind:", Enum.KeyCode.None, 51, function(k) Config.ESPWindowsKey = k end)
     CreateColorPicker("Color:", Color3.fromRGB(200, 100, 255), 52, function(c) Config.ESPWindowsColor = c end)
 
-    CreateSection("KEYBINDS", 60)
-    local KBLabels = {}
-    local function CreateKBInfo(name, order)
-        local f = Instance.new("Frame")
-        f.Size = UDim2.new(1, 0, 0, 22)
-        f.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
-        f.BorderSizePixel = 0
-        f.LayoutOrder = order
-        f.Parent = Container
-        Instance.new("UICorner", f).CornerRadius = UDim.new(0, 5)
-
-        local t = Instance.new("TextLabel")
-        t.Size = UDim2.new(0.55, 0, 1, 0)
-        t.Position = UDim2.new(0, 10, 0, 0)
-        t.BackgroundTransparency = 1
-        t.Text = name
-        t.TextColor3 = Color3.fromRGB(150, 150, 165)
-        t.Font = Enum.Font.Gotham
-        t.TextSize = 11
-        t.TextXAlignment = Enum.TextXAlignment.Left
-        t.Parent = f
-
-        local v = Instance.new("TextLabel")
-        v.Size = UDim2.new(0.4, -10, 1, 0)
-        v.Position = UDim2.new(0.55, 0, 0, 0)
-        v.BackgroundTransparency = 1
-        v.Text = "[ NONE ]"
-        v.TextColor3 = Color3.fromRGB(255, 200, 80)
-        v.Font = Enum.Font.GothamBold
-        v.TextSize = 11
-        v.TextXAlignment = Enum.TextXAlignment.Right
-        v.Parent = f
-
-        KBLabels[name] = v
-        AutoScroll()
-    end
-
-    CreateKBInfo("Menu:", 61)
-    KBLabels["Menu:"].Text = "[ RightShift ]"
-    CreateKBInfo("Avto-kinzhal:", 62)
-    CreateKBInfo("Maniac:", 63)
-    CreateKBInfo("Survivors:", 64)
-    CreateKBInfo("Generators:", 65)
-    CreateKBInfo("Pallets:", 66)
-    CreateKBInfo("Windows:", 67)
-
-    local function UpdateKBLabels()
-        local function KN(k)
-            if k == Enum.KeyCode.None then return "[ NONE ]" end
-            return "[ " .. k.Name .. " ]"
-        end
-        KBLabels["Avto-kinzhal:"].Text = KN(Config.AutoDaggerKey)
-        KBLabels["Maniac:"].Text = KN(Config.ESPManiacKey)
-        KBLabels["Survivors:"].Text = KN(Config.ESPSurvivorsKey)
-        KBLabels["Generators:"].Text = KN(Config.ESPGeneratorsKey)
-        KBLabels["Pallets:"].Text = KN(Config.ESPPalletsKey)
-        KBLabels["Windows:"].Text = KN(Config.ESPWindowsKey)
-    end
-
     local KeyMap = {
         {key = "AutoDaggerKey",   config = "AutoDagger",   toggle = "Avto-kinzhal"},
         {key = "ESPManiacKey",    config = "ESPManiac",    toggle = "Maniac"},
@@ -885,7 +841,9 @@ local function StartHub()
                 Config[km.config] = not Config[km.config]
                 SyncToggle(km.toggle, Config[km.config])
                 if not Config[km.config] then
-                    for p, _ in pairs(ESPObjects) do RemoveESP(p) end
+                    if km.config == "ESPManiac" then RemoveESPByType("maniac")
+                    elseif km.config == "ESPSurvivors" then RemoveESPByType("survivor")
+                    end
                 end
                 return
             end
@@ -905,12 +863,16 @@ local function StartHub()
                     end
                     if isM and Config.ESPManiac then
                         CreateESP(player)
-                        UpdateESP(player, Config.ESPManiacColor, "MANIAC", Config.ESPManiacName, Config.ESPManiacDist)
+                        UpdateESP(player, Config.ESPManiacColor, Config.ESPManiacName, Config.ESPManiacDist, "maniac")
                     elseif not isM and Config.ESPSurvivors then
                         CreateESP(player)
-                        UpdateESP(player, Config.ESPSurvivorsColor, "SURV", Config.ESPSurvivorsName, Config.ESPSurvivorsDist)
+                        UpdateESP(player, Config.ESPSurvivorsColor, Config.ESPSurvivorsName, Config.ESPSurvivorsDist, "survivor")
                     else
-                        RemoveESP(player)
+                        if ESPType[player] == "maniac" and not Config.ESPManiac then RemoveESP(player)
+                        elseif ESPType[player] == "survivor" and not Config.ESPSurvivors then RemoveESP(player)
+                        elseif not isM and not Config.ESPSurvivors then RemoveESP(player)
+                        elseif isM and not Config.ESPManiac then RemoveESP(player)
+                        end
                     end
                 else
                     RemoveESP(player)
@@ -935,6 +897,124 @@ local function StartHub()
                 for obj, _ in pairs(MapESPObjects) do RemoveMapESP(obj) end
             end
         end)
+    end)
+
+    local KBFrame = Instance.new("Frame")
+    KBFrame.Name = "KeybindsWindow"
+    KBFrame.Size = UDim2.new(0, 200, 0, 200)
+    KBFrame.Position = UDim2.new(0, 20, 0.5, -100)
+    KBFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+    KBFrame.BorderSizePixel = 0
+    KBFrame.Parent = ScreenGui
+    Instance.new("UICorner", KBFrame).CornerRadius = UDim.new(0, 8)
+    Instance.new("UIStroke", KBFrame).Color = Color3.fromRGB(50, 50, 60)
+
+    local KBTitle = Instance.new("TextLabel")
+    KBTitle.Size = UDim2.new(1, 0, 0, 26)
+    KBTitle.BackgroundColor3 = Color3.fromRGB(28, 28, 35)
+    KBTitle.BorderSizePixel = 0
+    KBTitle.Text = "KEYBINDS"
+    KBTitle.TextColor3 = Color3.new(1, 1, 1)
+    KBTitle.Font = Enum.Font.GothamBold
+    KBTitle.TextSize = 12
+    KBTitle.Parent = KBFrame
+    Instance.new("UICorner", KBTitle).CornerRadius = UDim.new(0, 8)
+
+    local KBDragging = false
+    local KBDragStart = nil
+    local KBStartPos = nil
+    KBTitle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            KBDragging = true
+            KBDragStart = input.Position
+            KBStartPos = KBFrame.Position
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            KBDragging = false
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if KBDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - KBDragStart
+            KBFrame.Position = UDim2.new(KBStartPos.X.Scale, KBStartPos.X.Offset + delta.X, KBStartPos.Y.Scale, KBStartPos.Y.Offset + delta.Y)
+        end
+    end)
+
+    local KBContainer = Instance.new("ScrollingFrame")
+    KBContainer.Size = UDim2.new(1, -10, 1, -30)
+    KBContainer.Position = UDim2.new(0, 5, 0, 28)
+    KBContainer.BackgroundTransparency = 1
+    KBContainer.ScrollBarThickness = 2
+    KBContainer.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 100)
+    KBContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
+    KBContainer.Parent = KBFrame
+    Instance.new("UIListLayout", KBContainer).Padding = UDim.new(0, 2)
+    KBContainer:FindFirstChildOfClass("UIListLayout").SortOrder = Enum.SortOrder.LayoutOrder
+
+    local KBLabels = {}
+    local function AddKBRow(name, key, order)
+        local f = Instance.new("Frame")
+        f.Size = UDim2.new(1, 0, 0, 18)
+        f.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+        f.BorderSizePixel = 0
+        f.LayoutOrder = order
+        f.Parent = KBContainer
+        Instance.new("UICorner", f).CornerRadius = UDim.new(0, 3)
+
+        local t = Instance.new("TextLabel")
+        t.Size = UDim2.new(0.55, 0, 1, 0)
+        t.Position = UDim2.new(0, 6, 0, 0)
+        t.BackgroundTransparency = 1
+        t.Text = name
+        t.TextColor3 = Color3.fromRGB(150, 150, 165)
+        t.Font = Enum.Font.Gotham
+        t.TextSize = 10
+        t.TextXAlignment = Enum.TextXAlignment.Left
+        t.Parent = f
+
+        local v = Instance.new("TextLabel")
+        v.Size = UDim2.new(0.4, -6, 1, 0)
+        v.Position = UDim2.new(0.55, 0, 0, 0)
+        v.BackgroundTransparency = 1
+        v.Text = key
+        v.TextColor3 = Color3.fromRGB(255, 200, 80)
+        v.Font = Enum.Font.GothamBold
+        v.TextSize = 10
+        v.TextXAlignment = Enum.TextXAlignment.Right
+        v.Parent = f
+
+        KBLabels[name] = v
+    end
+
+    local function KN(k)
+        if k == Enum.KeyCode.None then return "[ NONE ]" end
+        return "[ " .. k.Name .. " ]"
+    end
+
+    AddKBRow("Menu", "[ RightShift ]", 1)
+    AddKBRow("Avto-kinzhal", KN(Config.AutoDaggerKey), 2)
+    AddKBRow("Maniac", KN(Config.ESPManiacKey), 3)
+    AddKBRow("Survivors", KN(Config.ESPSurvivorsKey), 4)
+    AddKBRow("Generators", KN(Config.ESPGeneratorsKey), 5)
+    AddKBRow("Pallets", KN(Config.ESPPalletsKey), 6)
+    AddKBRow("Windows", KN(Config.ESPWindowsKey), 7)
+
+    local function UpdateKBLabels()
+        KBLabels["Avto-kinzhal"].Text = KN(Config.AutoDaggerKey)
+        KBLabels["Maniac"].Text = KN(Config.ESPManiacKey)
+        KBLabels["Survivors"].Text = KN(Config.ESPSurvivorsKey)
+        KBLabels["Generators"].Text = KN(Config.ESPGeneratorsKey)
+        KBLabels["Pallets"].Text = KN(Config.ESPPalletsKey)
+        KBLabels["Windows"].Text = KN(Config.ESPWindowsKey)
+    end
+
+    task.spawn(function()
+        while ScreenGui.Parent do
+            UpdateKBLabels()
+            task.wait(0.3)
+        end
     end)
 
     print("[SNOW HUB] Loaded! Right Shift = menu")
