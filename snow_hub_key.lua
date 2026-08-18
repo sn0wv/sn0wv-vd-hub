@@ -1,4 +1,3 @@
-```lua
 -- SNOW HUB
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -959,4 +958,3 @@ KeyBox.FocusLost:Connect(function(enter)
         KeyBtn:Activate()
     end
 end)
-```
