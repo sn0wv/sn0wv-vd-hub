@@ -97,23 +97,26 @@ local function StartHub()
         AutoDaggerRange = 15,
         ESPManiac = false,
         ESPManiacKey = Enum.KeyCode.None,
-        ESPManiacColor = Color3.fromRGB(255, 50, 50),
-        ESPManiacName = true,
-        ESPManiacDist = true,
         ESPSurvivors = false,
         ESPSurvivorsKey = Enum.KeyCode.None,
-        ESPSurvivorsColor = Color3.fromRGB(50, 200, 255),
         ESPSurvivorsName = true,
         ESPSurvivorsDist = true,
         ESPGenerators = false,
         ESPGeneratorsKey = Enum.KeyCode.None,
-        ESPGeneratorsColor = Color3.fromRGB(255, 255, 50),
         ESPPallets = false,
         ESPPalletsKey = Enum.KeyCode.None,
-        ESPPalletsColor = Color3.fromRGB(255, 150, 50),
         ESPWindows = false,
         ESPWindowsKey = Enum.KeyCode.None,
-        ESPWindowsColor = Color3.fromRGB(200, 100, 255),
+        ESPColor = Color3.fromRGB(255, 50, 50),
+        MenuColor = Color3.fromRGB(80, 140, 240),
+        Speed = false,
+        SpeedKey = Enum.KeyCode.None,
+        SpeedVal = 24,
+        Jump = false,
+        JumpKey = Enum.KeyCode.None,
+        JumpVal = 80,
+        Noclip = false,
+        NoclipKey = Enum.KeyCode.None,
     }
 
     local ESPObjects = {}
@@ -157,11 +160,13 @@ local function StartHub()
     MenuFrame.Visible = false
     MenuFrame.Parent = ScreenGui
     Instance.new("UICorner", MenuFrame).CornerRadius = UDim.new(0, 8)
-    Instance.new("UIStroke", MenuFrame).Color = Color3.fromRGB(50, 50, 60)
+    local MenuStroke = Instance.new("UIStroke", MenuFrame)
+    MenuStroke.Color = Config.MenuColor
+    MenuStroke.Thickness = 1
 
     local Title = Instance.new("TextLabel")
     Title.Size = UDim2.new(1, 0, 0, 34)
-    Title.BackgroundColor3 = Color3.fromRGB(28, 28, 35)
+    Title.BackgroundColor3 = Color3.new(Config.MenuColor.R * 0.35, Config.MenuColor.G * 0.35, Config.MenuColor.B * 0.35)
     Title.BorderSizePixel = 0
     Title.Text = "SNOW HUB"
     Title.TextColor3 = Color3.new(1, 1, 1)
@@ -567,26 +572,8 @@ local function StartHub()
         ESPType[player] = espType
     end
 
-    local function CreateMapESP(obj, name, color)
+    local function CreateMapESP(obj, color)
         if MapESPObjects[obj] then return end
-        local bb = Instance.new("BillboardGui")
-        bb.Size = UDim2.new(0, 140, 0, 26)
-        bb.StudsOffset = Vector3.new(0, 1.5, 0)
-        bb.AlwaysOnTop = true
-        bb.MaxDistance = 350
-        bb.Parent = obj
-
-        local lb = Instance.new("TextLabel")
-        lb.Size = UDim2.new(1, 0, 1, 0)
-        lb.BackgroundTransparency = 1
-        lb.Text = name
-        lb.TextColor3 = color
-        lb.Font = Enum.Font.GothamBold
-        lb.TextSize = 12
-        lb.TextStrokeTransparency = 0.4
-        lb.TextStrokeColor3 = Color3.new(0, 0, 0)
-        lb.Parent = bb
-
         local hl = Instance.new("Highlight")
         hl.FillColor = color
         hl.FillTransparency = 0.75
@@ -594,18 +581,20 @@ local function StartHub()
         hl.OutlineTransparency = 0
         hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
         hl.Parent = obj
-
-        MapESPObjects[obj] = { Billboard = bb, Highlight = hl }
+        MapESPObjects[obj] = { Highlight = hl }
     end
 
     local function RemoveMapESP(obj)
         local e = MapESPObjects[obj]
         if e then
-            if e.Billboard then e.Billboard:Destroy() end
             if e.Highlight then e.Highlight:Destroy() end
             MapESPObjects[obj] = nil
         end
     end
+
+    local MapScanCache = {}
+    local MapScanTime = 0
+    local MAP_SCAN_INTERVAL = 2
 
     local function FindPallets()
         local pals = {}
@@ -618,13 +607,8 @@ local function StartHub()
                 end
             elseif obj:IsA("BasePart") then
                 local n = obj.Name:lower()
-                if n == "pallet" or n == "woodenpallet" or n == "pallet_part" then
+                if n:find("pallet") then
                     table.insert(pals, obj)
-                elseif obj.Parent and obj.Parent:IsA("Model") then
-                    local pn = obj.Parent.Name:lower()
-                    if pn:find("pallet") then
-                        table.insert(pals, obj)
-                    end
                 end
             end
         end
@@ -634,9 +618,15 @@ local function StartHub()
     local function FindGenerators()
         local gens = {}
         for _, obj in pairs(Workspace:GetDescendants()) do
-            if obj:IsA("BasePart") then
+            if obj:IsA("Model") then
                 local n = obj.Name:lower()
                 if n:find("generator") or n:find("gen") then
+                    local primary = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
+                    if primary then table.insert(gens, primary) end
+                end
+            elseif obj:IsA("BasePart") then
+                local n = obj.Name:lower()
+                if n:find("generator") or n == "gen" then
                     table.insert(gens, obj)
                 end
             end
@@ -647,11 +637,33 @@ local function StartHub()
     local function FindWindows()
         local wins = {}
         for _, obj in pairs(Workspace:GetDescendants()) do
-            if obj:IsA("BasePart") then
+            if obj:IsA("Model") then
                 local n = obj.Name:lower()
-                if n:find("window") or n:find("glass") or n:find("windowbreak") then
+                if n:find("window") or n:find("barricade") or n:find("windowbreak") or n:find("board") then
+                    local primary = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
+                    if primary then table.insert(wins, primary) end
+                end
+            elseif obj:IsA("BasePart") then
+                local n = obj.Name:lower()
+                if n:find("window") or n:find("barricade") or n:find("windowbreak") or n:find("board") or n:find("glass") then
                     table.insert(wins, obj)
                 end
+            end
+        end
+        return wins
+    end
+
+    local function ScanMapObjects()
+        local now = tick()
+        if now - MapScanTime < MAP_SCAN_INTERVAL then return MapScanCache end
+        MapScanTime = now
+        MapScanCache = {
+            pallets = Config.ESPPallets and FindPallets() or {},
+            generators = Config.ESPGenerators and FindGenerators() or {},
+            windows = Config.ESPWindows and FindWindows() or {},
+        }
+        return MapScanCache
+    end
             end
         end
         return wins
@@ -752,69 +764,93 @@ local function StartHub()
         if t then t.setState(val) end
     end
 
-    CreateSection("AVTO KINZHAL", 1)
-    CreateToggle("Avto-kinzhal", false, 2, function(v) Config.AutoDagger = v end)
+    CreateSection("COMBAT", 1)
+    CreateToggle("Auto-kinzhal", false, 2, function(v) Config.AutoDagger = v end)
     CreateKeybind("Bind:", Enum.KeyCode.None, 3, function(k) Config.AutoDaggerKey = k end)
     CreateSlider("Range:", 5, 50, 15, 4, function(v) Config.AutoDaggerRange = v end)
 
-    CreateSection("ESP - PLAYERS", 10)
-    CreateToggle("Maniac", false, 11, function(v)
+    CreateSection("MOVEMENT", 10)
+    CreateToggle("Speed", false, 11, function(v) Config.Speed = v end)
+    CreateKeybind("Bind:", Enum.KeyCode.None, 111, function(k) Config.SpeedKey = k end)
+    CreateSlider("Speed:", 16, 100, 24, 12, function(v) Config.SpeedVal = v end)
+    CreateToggle("Jump", false, 13, function(v) Config.Jump = v end)
+    CreateKeybind("Bind:", Enum.KeyCode.None, 113, function(k) Config.JumpKey = k end)
+    CreateSlider("Jump:", 50, 200, 80, 14, function(v) Config.JumpVal = v end)
+    CreateToggle("Noclip", false, 15, function(v) Config.Noclip = v end)
+    CreateKeybind("Bind:", Enum.KeyCode.None, 115, function(k) Config.NoclipKey = k end)
+
+    CreateSection("ESP - PLAYERS", 20)
+    CreateToggle("Maniac", false, 21, function(v)
         Config.ESPManiac = v
         if not v then RemoveESPByType("maniac") end
     end)
-    CreateKeybind("Bind:", Enum.KeyCode.None, 12, function(k) Config.ESPManiacKey = k end)
-    CreateColorPicker("Color:", Color3.fromRGB(255, 50, 50), 13, function(c) Config.ESPManiacColor = c end)
-    CreateSubToggle("Show name", true, 14, 11, function(v) Config.ESPManiacName = v end)
-    CreateSubToggle("Show distance", true, 15, 11, function(v) Config.ESPManiacDist = v end)
+    CreateKeybind("Bind:", Enum.KeyCode.None, 22, function(k) Config.ESPManiacKey = k end)
+    CreateSubToggle("Show name", true, 23, 21, function(v) Config.ESPManiacName = v end)
+    CreateSubToggle("Show distance", true, 24, 21, function(v) Config.ESPManiacDist = v end)
 
-    CreateToggle("Survivors", false, 20, function(v)
+    CreateToggle("Survivors", false, 30, function(v)
         Config.ESPSurvivors = v
         if not v then RemoveESPByType("survivor") end
     end)
-    CreateKeybind("Bind:", Enum.KeyCode.None, 21, function(k) Config.ESPSurvivorsKey = k end)
-    CreateColorPicker("Color:", Color3.fromRGB(50, 200, 255), 22, function(c) Config.ESPSurvivorsColor = c end)
-    CreateSubToggle("Show name", true, 23, 20, function(v) Config.ESPSurvivorsName = v end)
-    CreateSubToggle("Show distance", true, 24, 20, function(v) Config.ESPSurvivorsDist = v end)
+    CreateKeybind("Bind:", Enum.KeyCode.None, 31, function(k) Config.ESPSurvivorsKey = k end)
+    CreateSubToggle("Show name", true, 32, 30, function(v) Config.ESPSurvivorsName = v end)
+    CreateSubToggle("Show distance", true, 33, 30, function(v) Config.ESPSurvivorsDist = v end)
 
-    CreateSection("ESP - MAP", 30)
-    CreateToggle("Generators", false, 31, function(v)
+    CreateSection("ESP - MAP", 40)
+    CreateToggle("Generators", false, 41, function(v)
         Config.ESPGenerators = v
         if not v then
-            for obj, _ in pairs(MapESPObjects) do
-                local n = obj.Name:lower()
-                if n:find("generator") or n:find("gen") then RemoveMapESP(obj) end
-            end
+            for obj, _ in pairs(MapESPObjects) do RemoveMapESP(obj) end
+            MapScanCache = {}
         end
     end)
-    CreateKeybind("Bind:", Enum.KeyCode.None, 32, function(k) Config.ESPGeneratorsKey = k end)
-    CreateColorPicker("Color:", Color3.fromRGB(255, 255, 50), 33, function(c) Config.ESPGeneratorsColor = c end)
+    CreateKeybind("Bind:", Enum.KeyCode.None, 42, function(k) Config.ESPGeneratorsKey = k end)
 
-    CreateToggle("Pallets", false, 40, function(v)
+    CreateToggle("Pallets", false, 50, function(v)
         Config.ESPPallets = v
         if not v then
-            for obj, _ in pairs(MapESPObjects) do
-                local n = obj.Name:lower()
-                if n:find("pallet") then RemoveMapESP(obj) end
-            end
+            for obj, _ in pairs(MapESPObjects) do RemoveMapESP(obj) end
+            MapScanCache = {}
         end
     end)
-    CreateKeybind("Bind:", Enum.KeyCode.None, 41, function(k) Config.ESPPalletsKey = k end)
-    CreateColorPicker("Color:", Color3.fromRGB(255, 150, 50), 42, function(c) Config.ESPPalletsColor = c end)
+    CreateKeybind("Bind:", Enum.KeyCode.None, 51, function(k) Config.ESPPalletsKey = k end)
 
-    CreateToggle("Windows", false, 50, function(v)
+    CreateToggle("Windows", false, 60, function(v)
         Config.ESPWindows = v
         if not v then
-            for obj, _ in pairs(MapESPObjects) do
-                local n = obj.Name:lower()
-                if n:find("window") or n:find("glass") then RemoveMapESP(obj) end
-            end
+            for obj, _ in pairs(MapESPObjects) do RemoveMapESP(obj) end
+            MapScanCache = {}
         end
     end)
-    CreateKeybind("Bind:", Enum.KeyCode.None, 51, function(k) Config.ESPWindowsKey = k end)
-    CreateColorPicker("Color:", Color3.fromRGB(200, 100, 255), 52, function(c) Config.ESPWindowsColor = c end)
+    CreateKeybind("Bind:", Enum.KeyCode.None, 61, function(k) Config.ESPWindowsKey = k end)
+
+    CreateSection("COLOR", 70)
+    CreateColorPicker("ESP Color:", Color3.fromRGB(255, 50, 50), 71, function(c)
+        Config.ESPColor = c
+        for _, esp in pairs(ESPObjects) do
+            if esp.NameLabel then esp.NameLabel.TextColor3 = c end
+            if esp.Highlight then esp.Highlight.FillColor = c; esp.Highlight.OutlineColor = c end
+        end
+        for _, esp in pairs(MapESPObjects) do
+            if esp.Highlight then esp.Highlight.FillColor = c; esp.Highlight.OutlineColor = c end
+        end
+    end)
+    CreateColorPicker("Menu Color:", Color3.fromRGB(80, 140, 240), 72, function(c)
+        Config.MenuColor = c
+        local ms = MenuFrame:FindFirstChildOfClass("UIStroke")
+        if ms then ms.Color = c end
+        Title.BackgroundColor3 = Color3.new(c.R * 0.35, c.G * 0.35, c.B * 0.35)
+        KBTitle.BackgroundColor3 = Color3.new(c.R * 0.35, c.G * 0.35, c.B * 0.35)
+        KBStroke.Color = c
+        Container.ScrollBarImageColor3 = c
+        KBContainer.ScrollBarImageColor3 = c
+    end)
 
     local KeyMap = {
-        {key = "AutoDaggerKey",   config = "AutoDagger",   toggle = "Avto-kinzhal"},
+        {key = "AutoDaggerKey",   config = "AutoDagger",   toggle = "Auto-kinzhal"},
+        {key = "SpeedKey",        config = "Speed",        toggle = "Speed"},
+        {key = "JumpKey",         config = "Jump",         toggle = "Jump"},
+        {key = "NoclipKey",       config = "Noclip",       toggle = "Noclip"},
         {key = "ESPManiacKey",    config = "ESPManiac",    toggle = "Maniac"},
         {key = "ESPSurvivorsKey", config = "ESPSurvivors", toggle = "Survivors"},
         {key = "ESPGeneratorsKey",config = "ESPGenerators",toggle = "Generators"},
@@ -853,6 +889,25 @@ local function StartHub()
     RunService.Heartbeat:Connect(function()
         pcall(function()
             AutoDaggerTick()
+
+            if Config.Speed and Humanoid then
+                Humanoid.WalkSpeed = Config.SpeedVal
+            elseif not Config.Speed and Humanoid then
+                Humanoid.WalkSpeed = 16
+            end
+            if Config.Jump and Humanoid then
+                Humanoid.JumpPower = Config.JumpVal
+            elseif not Config.Jump and Humanoid then
+                Humanoid.JumpPower = 50
+            end
+            if Config.Noclip and Character then
+                for _, part in pairs(Character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end
+
             for _, player in pairs(Players:GetPlayers()) do
                 if player ~= LP and player.Character and player.Character:FindFirstChild("Head") then
                     local tool = player.Character:FindFirstChildOfClass("Tool")
@@ -863,10 +918,10 @@ local function StartHub()
                     end
                     if isM and Config.ESPManiac then
                         CreateESP(player)
-                        UpdateESP(player, Config.ESPManiacColor, Config.ESPManiacName, Config.ESPManiacDist, "maniac")
+                        UpdateESP(player, Config.ESPColor, Config.ESPManiacName, Config.ESPManiacDist, "maniac")
                     elseif not isM and Config.ESPSurvivors then
                         CreateESP(player)
-                        UpdateESP(player, Config.ESPSurvivorsColor, Config.ESPSurvivorsName, Config.ESPSurvivorsDist, "survivor")
+                        UpdateESP(player, Config.ESPColor, Config.ESPSurvivorsName, Config.ESPSurvivorsDist, "survivor")
                     else
                         if ESPType[player] == "maniac" and not Config.ESPManiac then RemoveESP(player)
                         elseif ESPType[player] == "survivor" and not Config.ESPSurvivors then RemoveESP(player)
@@ -878,40 +933,44 @@ local function StartHub()
                     RemoveESP(player)
                 end
             end
+
+            local scan = ScanMapObjects()
             if Config.ESPGenerators then
-                for _, obj in pairs(FindGenerators()) do
-                    if not MapESPObjects[obj] then CreateMapESP(obj, "GEN", Config.ESPGeneratorsColor) end
+                for _, obj in pairs(scan.generators) do
+                    if not MapESPObjects[obj] then CreateMapESP(obj, Config.ESPColor) end
                 end
             end
             if Config.ESPPallets then
-                for _, obj in pairs(FindPallets()) do
-                    if not MapESPObjects[obj] then CreateMapESP(obj, "PAL", Config.ESPPalletsColor) end
+                for _, obj in pairs(scan.pallets) do
+                    if not MapESPObjects[obj] then CreateMapESP(obj, Config.ESPColor) end
                 end
             end
             if Config.ESPWindows then
-                for _, obj in pairs(FindWindows()) do
-                    if not MapESPObjects[obj] then CreateMapESP(obj, "WIN", Config.ESPWindowsColor) end
+                for _, obj in pairs(scan.windows) do
+                    if not MapESPObjects[obj] then CreateMapESP(obj, Config.ESPColor) end
                 end
             end
             if not Config.ESPGenerators and not Config.ESPPallets and not Config.ESPWindows then
                 for obj, _ in pairs(MapESPObjects) do RemoveMapESP(obj) end
+                MapScanCache = {}
             end
         end)
     end)
 
     local KBFrame = Instance.new("Frame")
     KBFrame.Name = "KeybindsWindow"
-    KBFrame.Size = UDim2.new(0, 200, 0, 200)
+    KBFrame.Size = UDim2.new(0, 200, 0, 0)
     KBFrame.Position = UDim2.new(0, 20, 0.5, -100)
     KBFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
     KBFrame.BorderSizePixel = 0
     KBFrame.Parent = ScreenGui
     Instance.new("UICorner", KBFrame).CornerRadius = UDim.new(0, 8)
-    Instance.new("UIStroke", KBFrame).Color = Color3.fromRGB(50, 50, 60)
+    local KBStroke = Instance.new("UIStroke", KBFrame)
+    KBStroke.Color = Config.MenuColor
 
     local KBTitle = Instance.new("TextLabel")
     KBTitle.Size = UDim2.new(1, 0, 0, 26)
-    KBTitle.BackgroundColor3 = Color3.fromRGB(28, 28, 35)
+    KBTitle.BackgroundColor3 = Color3.new(Config.MenuColor.R * 0.35, Config.MenuColor.G * 0.35, Config.MenuColor.B * 0.35)
     KBTitle.BorderSizePixel = 0
     KBTitle.Text = "KEYBINDS"
     KBTitle.TextColor3 = Color3.new(1, 1, 1)
@@ -947,16 +1006,18 @@ local function StartHub()
     KBContainer.Position = UDim2.new(0, 5, 0, 28)
     KBContainer.BackgroundTransparency = 1
     KBContainer.ScrollBarThickness = 2
-    KBContainer.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 100)
+    KBContainer.ScrollBarImageColor3 = Config.MenuColor
     KBContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
     KBContainer.Parent = KBFrame
     Instance.new("UIListLayout", KBContainer).Padding = UDim.new(0, 2)
     KBContainer:FindFirstChildOfClass("UIListLayout").SortOrder = Enum.SortOrder.LayoutOrder
 
+    local KBRows = {}
     local KBLabels = {}
-    local function AddKBRow(name, key, order)
+
+    local function AddKBRow(name, configKey, order)
         local f = Instance.new("Frame")
-        f.Size = UDim2.new(1, 0, 0, 18)
+        f.Size = UDim2.new(1, 0, 0, 20)
         f.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
         f.BorderSizePixel = 0
         f.LayoutOrder = order
@@ -978,13 +1039,14 @@ local function StartHub()
         v.Size = UDim2.new(0.4, -6, 1, 0)
         v.Position = UDim2.new(0.55, 0, 0, 0)
         v.BackgroundTransparency = 1
-        v.Text = key
-        v.TextColor3 = Color3.fromRGB(255, 200, 80)
+        v.Text = "[ NONE ]"
+        v.TextColor3 = Color3.fromRGB(255, 255, 255)
         v.Font = Enum.Font.GothamBold
         v.TextSize = 10
         v.TextXAlignment = Enum.TextXAlignment.Right
         v.Parent = f
 
+        KBRows[name] = {frame = f, label = t, valueLabel = v, configKey = configKey}
         KBLabels[name] = v
     end
 
@@ -993,27 +1055,61 @@ local function StartHub()
         return "[ " .. k.Name .. " ]"
     end
 
-    AddKBRow("Menu", "[ RightShift ]", 1)
-    AddKBRow("Avto-kinzhal", KN(Config.AutoDaggerKey), 2)
-    AddKBRow("Maniac", KN(Config.ESPManiacKey), 3)
-    AddKBRow("Survivors", KN(Config.ESPSurvivorsKey), 4)
-    AddKBRow("Generators", KN(Config.ESPGeneratorsKey), 5)
-    AddKBRow("Pallets", KN(Config.ESPPalletsKey), 6)
-    AddKBRow("Windows", KN(Config.ESPWindowsKey), 7)
+    AddKBRow("Menu", nil, 1)
+    KBLabels["Menu"].Text = "[ RightShift ]"
+    AddKBRow("Auto-kinzhal", "AutoDagger", 2)
+    AddKBRow("Speed", "Speed", 3)
+    AddKBRow("Jump", "Jump", 4)
+    AddKBRow("Noclip", "Noclip", 5)
+    AddKBRow("Maniac", "ESPManiac", 6)
+    AddKBRow("Survivors", "ESPSurvivors", 7)
+    AddKBRow("Generators", "ESPGenerators", 8)
+    AddKBRow("Pallets", "ESPPallets", 9)
+    AddKBRow("Windows", "ESPWindows", 10)
+
+    KBFrame.Size = UDim2.new(0, 200, 0, #KBContainer:GetChildren() * 22 + 30)
 
     local function UpdateKBLabels()
-        KBLabels["Avto-kinzhal"].Text = KN(Config.AutoDaggerKey)
-        KBLabels["Maniac"].Text = KN(Config.ESPManiacKey)
-        KBLabels["Survivors"].Text = KN(Config.ESPSurvivorsKey)
-        KBLabels["Generators"].Text = KN(Config.ESPGeneratorsKey)
-        KBLabels["Pallets"].Text = KN(Config.ESPPalletsKey)
-        KBLabels["Windows"].Text = KN(Config.ESPWindowsKey)
+        local keyMap = {
+            Menu = nil,
+            ["Auto-kinzhal"] = "AutoDaggerKey",
+            Speed = "SpeedKey",
+            Jump = "JumpKey",
+            Noclip = "NoclipKey",
+            Maniac = "ESPManiacKey",
+            Survivors = "ESPSurvivorsKey",
+            Generators = "ESPGeneratorsKey",
+            Pallets = "ESPPalletsKey",
+            Windows = "ESPWindowsKey",
+        }
+        for name, row in pairs(KBRows) do
+            local keyField = keyMap[name]
+            if keyField then
+                row.valueLabel.Text = KN(Config[keyField])
+            end
+            if row.configKey then
+                local active = Config[row.configKey]
+                if active then
+                    row.frame.BackgroundColor3 = Color3.new(
+                        Config.MenuColor.R * 0.5,
+                        Config.MenuColor.G * 0.5,
+                        Config.MenuColor.B * 0.5
+                    )
+                    row.valueLabel.TextColor3 = Color3.new(1, 1, 1)
+                    row.label.TextColor3 = Color3.new(1, 1, 1)
+                else
+                    row.frame.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+                    row.valueLabel.TextColor3 = Color3.fromRGB(120, 120, 130)
+                    row.label.TextColor3 = Color3.fromRGB(150, 150, 165)
+                end
+            end
+        end
     end
 
     task.spawn(function()
         while ScreenGui.Parent do
             UpdateKBLabels()
-            task.wait(0.3)
+            task.wait(0.15)
         end
     end)
 
