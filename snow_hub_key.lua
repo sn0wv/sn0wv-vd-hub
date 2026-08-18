@@ -664,10 +664,6 @@ local function StartHub()
         }
         return MapScanCache
     end
-            end
-        end
-        return wins
-    end
 
     local function GetDagger()
         local bp = LP:FindFirstChild("Backpack")
