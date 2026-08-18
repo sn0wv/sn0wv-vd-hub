@@ -6,9 +6,7 @@ local Workspace = game:GetService("Workspace")
 local LP = Players.LocalPlayer
 
 -- KEY SYSTEM
-local ValidKeys = {
-    [115,110,48,87,95,68,101,86,33]
-}
+local ValidKeys = {115, 110, 48, 87, 95, 68, 101, 86, 33}
 
 local function CheckKey(input)
     if #input ~= #ValidKeys then return false end
